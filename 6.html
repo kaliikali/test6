@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test</title>
+<style>
+body { font-family:'Segoe UI',sans-serif; background:linear-gradient(135deg,#667eea,#764ba2); padding:30px; }
+h2 { color:#fff; text-align:center; margin-bottom:30px; }
+.question{ background:#fff; padding:20px; margin-bottom:20px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,.1); }
+.question p{ font-weight:600; margin-bottom:10px; }
+label{ display:block; padding:8px 12px; margin:6px 0; border-radius:8px; cursor:pointer; transition:background .2s; }
+label:hover{ background:#f0f3ff; }
+input[type="radio"]{ margin-right:8px; }
+button{ display:block; margin:30px auto; padding:12px 30px; font-size:16px; border:none; border-radius:8px; background:#4c51bf; color:#fff; font-weight:bold; }
+button:hover{ background:#3730a3; }
+.correct{ background:#d4edda !important; color:#155724; font-weight:bold; }
+.wrong{ background:#f8d7da !important; color:#721c24; font-weight:bold; }
+.result{ text-align:center; font-size:20px; margin-top:20px; color:#fff; font-weight:bold; }
+
+@media (max-width:600px){
+  body{ padding:14px; }
+  h2{ font-size:22px; margin-bottom:16px; }
+  .question{ padding:14px; border-radius:10px; }
+  .question p{ font-size:16px; line-height:1.35; }
+  label{ padding:10px 12px; font-size:15px; }
+  button{ width:100%; padding:14px 16px; font-size:16px; }
+  .result{ font-size:18px; }
+}
+</style>
+</head>
+<body>
+
+<h2>Test</h2>
+<form id="quiz"></form>
+<button type="button" id="checkBtn">Yoxla</button>
+<div class="result" id="result"></div>
+
+<script>
+/** Fisher–Yates shuffle (Safari üçün stabil) */
+function shuffleInPlace(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+const questions = [
+  {
+    id: 41,
+    text: "Aşağıdakı müddəalardan hansı düz deyildir?",
+    answers: [
+      { text: "fərqsizliklər əyrisi üzərində olan bütün nöqtələr pul gəlirlərinin eyni səviyyəsini əks etdirir", correct: true },
+      { text: "büdcə xətti üzərində olan hər hansı nöqtə iki müxtəlif əmtəənin müəyyən kombinasiyasını əks etdirir", correct: false },
+      { text: "fərqsizliklər üzərində olan bütün nöqtələr tələbatın ödənilməsinin eyni səviyyəsini əks etdirir", correct: false },
+      { text: "büdcə xətti üzərində olan bütün nöqtələr pul gəlirlərinin eyni səviyyəsini əks etdirir", correct: false },
+      { text: "bütün mülahizələr doğrudur", correct: false },
+    ]
+  },
+  {
+    id: 42,
+    text: "Aşağıdakı bazarın bazar əməliyyatlarının təşkili üzrə bazar təsnifatı ilə əlaqəsi yoxdur:",
+    answers: [
+      { text: "dövlət müəssisələri bazarı", correct: true },
+      { text: "pərakəndəsatış bazarı", correct: false },
+      { text: "topdansatış bazarı və pərakəndə satış bazarı", correct: false },
+      { text: "ixrac bazarı", correct: false },
+      { text: "idxal bazarı", correct: false },
+    ]
+  },
+  {
+    id: 43,
+    text: "Əsas kapitalın dəyərinin istifadə olunan əmək ehtiyatlarının sayına nisbəti nəyi göstərir?",
+    answers: [
+      { text: "əməyin fondyorla yüklənməsini", correct: true },
+      { text: "fondverimini və forunari sistemləri", correct: false },
+      { text: "amortizasiya norması", correct: false },
+      { text: "illik amortizasiyanı", correct: false },
+      { text: "əmək məhsuldarlığını", correct: false },
+    ]
+  },
+  {
+    id: 44,
+    text: "Əmtəənin müəyyən kəmiyyət nisbətlərində digər əmtəələrə mübadilə olunmaq qabiliyyəti adlanır:",
+    answers: [
+      { text: "mübadilə dəyəri", correct: true },
+      { text: "istehlak dəyəri", correct: false },
+      { text: "içtimai-zəruri dəyər", correct: false },
+      { text: "bazar dəyəri", correct: false },
+      { text: "əmtənin qiymətliliyi", correct: false },
+    ]
+  },
+  {
+    id: 45,
+    text: "Necə olur, rəqabətli iqtisadiyyat elə bir vəziyyətə gəlir, hansı ki, iqtisadi resursların səmərəli bölgüsü həyata keçirilir, hər subyekt özünün iqtisadi məqsədinə nail olur. Bu əsas problemi nəzərdən keçirilir.",
+    answers: [
+      { text: "ümumi tarazlıq nəzəriyyəsi", correct: true },
+      { text: "istehlakçı davranısı nəzəriyyəsi", correct: false },
+      { text: "təsadüfi tarazlığın təhlili", correct: false },
+      { text: "sosial ədalət nəzəriyyəsi", correct: false },
+      { text: "istehsal xərcləri nəzəriyyəsi", correct: false },
+    ]
+  },
+  {
+    id: 46,
+    text: "İqtisadi nəzəriyyənin predmetini daha dolğun səciyyələndirən tərif:",
+    answers: [
+      { text: "məhdud iqtisadi ehtiyatlar şəraitində insan cəmiyyətinin inkişafının ən ümumi qanunları haqqında elm", correct: true },
+      { text: "istehsal olunmuş nemətlərin istehsalı və bölgüsünün meyarları haqqında elm.", correct: false },
+      { text: "milli sərvətlər, onun mənbələri və ondan istifadə haqqında elm", correct: false },
+      { text: "insanların maddi və mənəvi tələbatlarının inkişafı və formalaşması haqqında elm", correct: false },
+      { text: "iqtisadi subyektlərin təsərrüfat fəaliyyəti və onların əlaqələri barədə elm", correct: false },
+    ]
+  },
+  {
+    id: 47,
+    text: "İqtisadi nəzəriyyədə riyazi metodlardan geniş istifadə etməyə kim başlamışdır:",
+    answers: [
+      { text: "L.Valras, V.Pareto", correct: true },
+      { text: "K.Marks, F.Engels", correct: false },
+      { text: "Ş.Furye. C.Sismondi", correct: false },
+      { text: "U.Jevons, K.Menger", correct: false },
+      { text: "A.Smit, D.Rikardo", correct: false },
+    ]
+  },
+  {
+    id: 48,
+    text: "İqtisad elmi təkrar istehsal prosesində neçə mərhələni ayırır:",
+    answers: [
+      { text: "4", correct: true },
+      { text: "3", correct: false },
+      { text: "2", correct: false },
+      { text: "5", correct: false },
+      { text: "6", correct: false },
+    ]
+  },
+  {
+    id: 49,
+    text: "Aşağıda göstərilən istehsal amillər siyahısından hansılar doğrudur?",
+    answers: [
+      { text: "torpaq, əmək, kapital, sahibkarlıq qabiliyyəti", correct: true },
+      { text: "torpaq, əmək, istehsal vasitəsi, texnologiya, idarəetmə", correct: false },
+      { text: "resurslar, texnologiya, sahibkarlıq, kapital", correct: false },
+      { text: "torpaq, əmək, kapital, iş qüvvəsi, idarəetmə", correct: false },
+      { text: "sahibkarlıq, texnologiya, əmək", correct: false },
+    ]
+  },
+  {
+    id: 50,
+    text: "İqtisad elminin əsas əhəmiyyəti bu gün ondan ibarətdir ki, o:",
+    answers: [
+      { text: "insanların tələbatlarının ödənilməsi baxımından iqtisadiyyatın daha yaxşı təşkil edilməsinin yollarını göstərir", correct: true },
+      { text: "sahibkarlara müvəfəqiyyətlə bizneslərini aparmağa kömək edir", correct: false },
+      { text: "insanlara təsərrüfat fəaliyyətlərindən onların davranışlarının həqiqi motivlərini açıqlayır", correct: false },
+      { text: "insanların içtimai həyatlarında iqtisadiyyatın yerini müəyyən edir", correct: false },
+      { text: "iqtisadçı-amillərə öz qabiliyyətlərini reallaşdırmağa imkan verir", correct: false },
+    ]
+  },
+  {
+    id: 51,
+    text: "Məcmu tələb nə deməkdir?",
+    answers: [
+      { text: "ev təsərrüfatlarının və dövlətin cəm tələbi", correct: true },
+      { text: "planlaşdırılan xərclərin cəmi", correct: false },
+      { text: "bütün ev təsərrüfatlarının tələbi", correct: false },
+      { text: "düzgün cavab yoxdur", correct: false },
+      { text: "bütün cavablar düzgündür", correct: false },
+    ]
+  },
+  {
+    id: 52,
+    text: "Əhali gəlirlərinin səviyyəsindən asılı olaraq indeksasiya sistemində hansı yanaşma prosesinə üstünlük verilir?",
+    answers: [
+      { text: "diferensial yanaşma", correct: true },
+      { text: "birbaşa yanaşma", correct: false },
+      { text: "birbaşa yanaşma", correct: false },
+      { text: "normal yanaşma", correct: false },
+      { text: "heç biri düz deyil", correct: false },
+    ]
+  },
+  {
+    id: 53,
+    text: "Aşağıdakılardan biri əhali gəlirlərinə daxil deyil:",
+    answers: [
+      { text: "nisbi gəlirlər", correct: true },
+      { text: "natural gəlirlər", correct: false },
+      { text: "pul gəlirləri", correct: false },
+      { text: "nominal gəlirlər", correct: false },
+      { text: "real gəlirlər", correct: false },
+    ]
+  },
+  {
+    id: 54,
+    text: "Mülkiyyət münasibətlərinin qloballaşması, əmək bölgüsü və kooperasiyalaşmanın daha yüksək səviyyəsi, təsərrüfatların təşkilinin yeni formaları, beynəlxalq iqtisadi təşkilatların tənzimləyici rolu:",
+    answers: [
+      { text: "qloballaşma tendensiyası", correct: true },
+      { text: "makroiqtisadi tendensiya", correct: false },
+      { text: "xarici ticarətin güclənməsi tendensiyası", correct: false },
+      { text: "beynəlxalq iqtisadi tendensiyanın güclənməsi", correct: false },
+      { text: "ictimai istehsalın artım tempi", correct: false },
+    ]
+  },
+  {
+    id: 55,
+    text: "Pul tələbi ilə pul təklifinin qarşılıqlı fəaliyyəti prosesində yaranır, bazarın elə bir vəziyyətini xarakterizə edir ki, pula olan tələbin həcmi, pula olan təklifin həcminə bərabərdir:",
+    answers: [
+      { text: "pul bazarında tarazlıq", correct: true },
+      { text: "bank sistemində tarazlıq", correct: false },
+      { text: "tələblə təklif arasında tarazlıq", correct: false },
+      { text: "kapital bazarında tarazlıq", correct: false },
+      { text: "maliyyə bazarının tarazlığı", correct: false },
+    ]
+  },
+  {
+    id: 56,
+    text: "Milli iqtisadiyyatın beynəlxalq inteqrasiya səviyyəsinə görə formaları:",
+    answers: [
+      { text: "açıq və qapalı milli iqtisadiyyat", correct: true },
+      { text: "asılı və müstəqil milli iqtisadiyyat", correct: false },
+      { text: "asılı və zəif inkişaf etmiş milli iqtisadiyyat", correct: false },
+      { text: "qapalı və sənaye yönümlü iqtisadiyyat", correct: false },
+      { text: "açıq və inkişaf etməkdə olan iqtisadiyyat", correct: false },
+    ]
+  },
+  {
+    id: 57,
+    text: "Bank sistemi neçə qrupdan ibarətdir?",
+    answers: [
+      { text: "Mərkəzi Bank, Kommersiya bankları və İxtisaslaşmış maliyyə-kredit institutları", correct: true },
+      { text: "İxtisaslaşmış maliyyə-kredit institutları və Mərkəzi Bank", correct: false },
+      { text: "Mərkəzi Bank, Universal və İxtisaslaşmış bank", correct: false },
+      { text: "Mərkəzi Bank, İxtisaslaşmış maliyyə-kredit institutları", correct: false },
+      { text: "Mərkəzi Bank, Kommersiya bankları", correct: false },
+    ]
+  },
+  {
+    id: 58,
+    text: "İqtisadi maraqların və ictimai təkrar istehsalın normal gedişatının pozulmasına şərait yaradır:",
+    answers: [
+      { text: "iqtisadi təhlükə", correct: true },
+      { text: "ölkədaxili maraqlar", correct: false },
+      { text: "geopolitik təhlükə", correct: false },
+      { text: "iqtisadi maraq", correct: false },
+      { text: "zəif iqtisadi siyasət", correct: false },
+    ]
+  },
+  {
+    id: 59,
+    text: "Aşağıdakılardan hansı kredit mexanizminin quruluşuna aid deyil?",
+    answers: [
+      { text: "bank hesablarında vəsaitlərin toplanması", correct: true },
+      { text: "kredit planlaşmasının aylar üzrə bölünməsi", correct: false },
+      { text: "kreditləşmənin obyektləri və subyektləri arasındakı fərq", correct: false },
+      { text: "hamısı düzdür", correct: false },
+      { text: "heç biri düz deyil", correct: false },
+    ]
+  },
+  {
+    id: 60,
+    text: "İqtisadiyyatın tənzimlənməsinin hansı tipləri var?",
+    answers: [
+      { text: "mərkəzləşmiş planlaşma, dövlət tənzimlənməsi", correct: true },
+      { text: "dövlət tənzimlənməsi və qeyri-mərkəzləşmə tənzimləməsi", correct: false },
+      { text: "mərkəzləşmiş planlaşma", correct: false },
+      { text: "qeyri-mərkəzləşmə", correct: false },
+      { text: "heç biri düz deyil", correct: false },
+    ]
+  },
+  {
+    id: 61,
+    text: "N.D.Kondratyevin böyük tsikllərin və ya uzun dalğaların təkrarlanmasını əlaqələndirirdi:",
+    answers: [
+      { text: "uzunmüddətli istehsal fondlarına qoyulan əsas kapitalın yeniləşməsi ilə əlaqədar", correct: true },
+      { text: "uzunmüddətli istehsal fondlarına qoyulan dövriyyə fondları ilə əlaqədar", correct: false },
+      { text: "qısamüddətli dövrdə istehsal fondlarına qoyulan dəyişən kapitalın həcmi ilə əlaqədardır", correct: false },
+      { text: "ortamüddətli istehsal fondlarına qoyulan dövriyyə və dəyişən kapitalla əlaqədar", correct: false },
+      { text: "hamısı düzdür", correct: false },
+    ]
+  },
+  {
+    id: 62,
+    text: "Aşağıdakı göstəricilərdən hansı dövlət kapital qoyuluşuna aid deyil?",
+    answers: [
+      { text: "ticarət kreditləri", correct: true },
+      { text: "subsidiyalar", correct: false },
+      { text: "qrantlar", correct: false },
+      { text: "BVF-nun krediti", correct: false },
+      { text: "dövlət istiqrazlar", correct: false },
+    ]
+  },
+  {
+    id: 63,
+    text: "Ümumi iqtisadi tarazlıq nəzəriyyəsinin banisi kimdir?",
+    answers: [
+      { text: "L.Valras", correct: true },
+      { text: "A.Marşall", correct: false },
+      { text: "A.Smit", correct: false },
+      { text: "C.Keyns", correct: false },
+      { text: "D.Rikardo", correct: false },
+    ]
+  },
+  {
+    id: 64,
+    text: "İqtisadi artımın dövlət tənzimlənməsi nəzəriyyələrinə aid deyildir:",
+    answers: [
+      { text: "klassik", correct: true },
+      { text: "keynsçilik", correct: false },
+      { text: "neokeynsçilik", correct: false },
+      { text: "monetarist", correct: false },
+      { text: "neoklassik", correct: false },
+    ]
+  },
+  {
+    id: 65,
+    text: "Indeksasiya təqaüdçülərin və qərarlaşmış gəlirlərə malik olan cəmiyyətin digər üzvlərinin həyat səviyyəsinin:",
+    answers: [
+      { text: "normal səviyyədə saxlanılması üçün istifadə edilir", correct: true },
+      { text: "aşağı səviyyədə saxlanılması üçün istifadə edilir", correct: false },
+      { text: "üstün səviyyədə saxlanılması üçün istifadə edilir", correct: false },
+      { text: "artan səviyyədə saxlanılması üçün istfadə edilir", correct: false },
+      { text: "heç biri düz deyil", correct: false },
+    ]
+  },
+  {
+    id: 66,
+    text: "Ümumi milli məhsul ilə ümumi daxili məhsul arasında nominal fərq adətən neçə faiz təşkil edir:",
+    answers: [
+      { text: "milli iqtisadiyyatın qloballaşma və inteqrasiyası nəticəsində 1%-dən çox artmağa meyllidir", correct: true },
+      { text: "milli iqtisadiyyatın qloballaşma və inteqrasiyası nəticəsində 1%-dən artıq olmur", correct: false },
+      { text: "milli iqtisadiyyatın qloballaşma və inteqrasiyası nəticəsində 5%-dən artıqdır", correct: false },
+      { text: "milli iqtisadiyyatın qloballaşma və inteqrasiyası nəticəsində 4%-dən artıqdır", correct: false },
+      { text: "milli iqtisadiyyatın qloballaşma və inteqrasiyası nəticəsində 6%-dən artıqdır", correct: false },
+    ]
+  },
+  {
+    id: 67,
+    text: "A.Smit beynəlxalq ticarətin mövcudluğunu və faydalılığını:",
+    answers: [
+      { text: "müxtəlif ölkələrdə məhsul istehsalındakı mütləq xərclərdəki fərqdə görürdü", correct: true },
+      { text: "müxtəlif ölkələrdə məhsul istehsalındakı zəruri xərclərdəki fərqdə görürdü", correct: false },
+      { text: "müxtəlif ölkələrdə məhsul istehsalındakı son hədd xərclərdəki fərqdə görürdü", correct: false },
+      { text: "müxtəlif ölkələrdə məhsul istehsalındakı ümumi xərclərdəki fərqdə görürdü", correct: false },
+      { text: "müxtəlif ölkələrdə məhsul istehsalındakı orta son hədd xərclərdəki fərqdə görürdü", correct: false },
+    ]
+  },
+  {
+    id: 68,
+    text: "Dövlətin sabitləşdirmə siyasətini həyata keçirmək üçün istifadə etdiyi üsullar –bu:",
+    answers: [
+      { text: "fiskal, pul-kredit və kombinələşdirilmiş", correct: true },
+      { text: "məcmu tələbin tənzimlənməsi", correct: false },
+      { text: "məcmu təklifin tənzimlənməsi", correct: false },
+      { text: "məcmu tələb və təklifin tənzimlənməsi", correct: false },
+      { text: "heç biri düz deyil", correct: false },
+    ]
+  },
+  {
+    id: 69,
+    text: "ÜMM-la ÜDM məhsul arasında nominal fərq böyük deyildir. Bir qayda olaraq bu 1%-dən artıq deyil. Ancaq qloballaşma və milli iqtisadiyyatların inteqrasiyası səviyyəsində bu fərq:",
+    answers: [
+      { text: "artım tendensiyasına malikdir", correct: true },
+      { text: "azalma tendensiyasına malikdir", correct: false },
+      { text: "orta templi tendensiyasına malikdir", correct: false },
+      { text: "sıfıra bərabərdir", correct: false },
+      { text: "heç biri", correct: false },
+    ]
+  },
+  {
+    id: 70,
+    text: "Cinni əmsalının daha da çox olması:",
+    answers: [
+      { text: "əhali gəlirlərində bərabərsizlik daha da çoxalır", correct: true },
+      { text: "əhali gəlirlərində bərabərsizlik daha da azalır", correct: false },
+      { text: "əhali gəlirlərində bərabərsizlik bərabərləşir", correct: false },
+      { text: "əhali gəlirlərində bərabərsizlik sıfra bərabər olur", correct: false },
+      { text: "əhali gəlirlərində bərabərsizlik sabitdir", correct: false },
+    ]
+  },
+  {
+    id: 71,
+    text: "Sərbəst iqtisadi zonaların tiplərindən biri:",
+    answers: [
+      { text: "iqtisadi və elmi-texniki inkişaf zonası", correct: true },
+      { text: "kənd təsərrüfatı zonası", correct: false },
+      { text: "emal sənayesi zonası", correct: false },
+      { text: "transmilli korporasiyalar", correct: false },
+      { text: "birgə müəssisələr", correct: false },
+    ]
+  },
+  {
+    id: 72,
+    text: "İstehsal xidmətlərinə olan səmərəli təklif və səmərəli tələb xidmətlər bazarında tarazlaşır... nəzəriyyə kimindir və necə adlanır:",
+    answers: [
+      { text: "L.Valrasın ümumi iqtisadi tarazlıq nəzəriyyəsi", correct: true },
+      { text: "A.Marşalın fərdi tarazlıq nəzəriyyəsi", correct: false },
+      { text: "E.Çemberlinin ümumi tarazlıq nəzəriyyəsi", correct: false },
+      { text: "C.Klarkın inkişaf edən sistem daxilində tarazlıq nəzəriyyəsi", correct: false },
+      { text: "C.Xiksin fərdi texnoloji nəzəriyyəsi", correct: false },
+    ]
+  },
+  {
+    id: 73,
+    text: "Con Meynard Keyns neoklassik məktəbinin görkəmli nümayəndəsidir?",
+    answers: [
+      { text: "Keyns neoklassik məktəbin görkəmli nümayəndəsi deyil", correct: true },
+      { text: "Keyns neoklassik məktəbin görkəmli nümayəndəsidir", correct: false },
+      { text: "Keyns marjinalizmin nümayəndəsidir", correct: false },
+      { text: "Keyns neosintez nəzəriyyəsinin nümayəndəsidir", correct: false },
+      { text: "Keyns institusionalizm məktəbinin nümayəndəsidir", correct: false },
+    ]
+  },
+  {
+    id: 74,
+    text: "Aşağıdakılardan biri iqtisadi artımın amillərinə daxil deyil:",
+    answers: [
+      { text: "intensiv artım", correct: true },
+      { text: "texniki tərəqqi", correct: false },
+      { text: "təbii resursların kəmiyyət və keyfiyyəti", correct: false },
+      { text: "əsas kapitalın həcmi", correct: false },
+      { text: "artan resursların səmərəli bölgüsü", correct: false },
+    ]
+  },
+  {
+    id: 75,
+    text: "Aksizlər, əlavə dəyərdən vergi, mülkiyyətdən vergi, lisenziya ödəmələri və gömrük haqqları hansı vergi növünə aid edilir:",
+    answers: [
+      { text: "əlavə dəyər vergisinə", correct: true },
+      { text: "birbaşa vergilərə", correct: false },
+      { text: "mülkiyyətdən vergiyə", correct: false },
+      { text: "dolayı vergilərə", correct: false },
+      { text: "mənfəətdən vergiyə", correct: false },
+    ]
+  },
+  {
+    id: 76,
+    text: "Milli iqtisadiyyatın iqtisadi və siyasi müstəqillik səviyyəsinə görə formaları:",
+    answers: [
+      { text: "asılı və müstəqil milli iqtisadiyyat", correct: true },
+      { text: "açıq və qapalı milli iqtisadiyyat", correct: false },
+      { text: "zəif inkişaf etmiş və inkişaf etmiş milli iqtisadiyyat", correct: false },
+      { text: "sənaye yönümlü və aqrar yönümlü milli iqtisadiyyat", correct: false },
+      { text: "qapalı və asılı milli iqtisadiyyat", correct: false },
+    ]
+  },
+  {
+    id: 77,
+    text: "İqtisadi inkişaf səviyyəsinə görə milli iqtisadiyyat:",
+    answers: [
+      { text: "zəif inkişaf etmiş və inkişaf etməkdə olan milli iqtisadiyyat", correct: true },
+      { text: "zəif və yarımasılı inkişaf etməkdə olan milli iqtisadiyyatın tənzimi", correct: false },
+      { text: "asılı və inkişaf etməkdə olan milli iqtisadiyyat asılılıq göstərir", correct: false },
+      { text: "asılı və zəif inkişaf etməkdə olan milli iqtisadiyyat", correct: false },
+      { text: "asılı, inkişaf etməkdə olan milli iqtisadiyyat", correct: false },
+    ]
+  },
+  {
+    id: 78,
+    text: "Kritik sosial-iqtisadi şəraitin əvvəlcədən, nəticələrini yumşaltmaq və zəiflətmək məqsədi ilə onun diqqət mərkəzində saxlanılması:",
+    answers: [
+      { text: "riskin idarə edilməsi", correct: true },
+      { text: "itkilərin qiymətləndirilməsi", correct: false },
+      { text: "zərərlərin müəyyənləşdirilməsi", correct: false },
+      { text: "riskin qiymətləndirilməsi", correct: false },
+      { text: "resursların kompensasiyası", correct: false },
+    ]
+  },
+  {
+    id: 79,
+    text: "Deviz bazarında tələb və təklifin qarşılıqlı fəaliyyəti nəticəsində formalaşan valyuta kursu:",
+    answers: [
+      { text: "üzən valyuta kursu", correct: true },
+      { text: "müvazinətli valyuta kursu", correct: false },
+      { text: "müəyyənləşmiş valyuta kursu", correct: false },
+      { text: "beynəlxalq valyuta kursu", correct: false },
+      { text: "tənzimlənən valyuta kursu", correct: false },
+    ]
+  },
+  {
+    id: 80,
+    text: "Burada fəaliyyət göstərən milli və xarici iqtisadi subyektlərin fəaliyyəti üçün güzəştli rejim yaradılır:",
+    answers: [
+      { text: "azad sahibkarlıq zonası", correct: true },
+      { text: "açıq birjalar və xarici investor bazarı", correct: false },
+      { text: "arbitraj və ofşor zonalar", correct: false },
+      { text: "azad ticarət", correct: false },
+      { text: "azad bazaar", correct: false },
+    ]
+  },
+];
+
+let rendered = []; // render zamanı qarışmış versiya
+
+function renderQuiz(){
+  const quiz = document.getElementById("quiz");
+  quiz.innerHTML = "";
+
+  rendered = questions.map(q => ({
+    id: q.id,
+    text: q.text,
+    answers: shuffleInPlace(q.answers.map(a => ({...a}))) // cavablar qarışsın
+  }));
+
+  shuffleInPlace(rendered); // suallar qarışsın
+
+  rendered.forEach((q, index) => {
+    const div = document.createElement("div");
+    div.className = "question";
+    div.innerHTML = `<p>${q.id}. ${q.text}</p>`;
+
+    q.answers.forEach((a, ai) => {
+      const inputId = `q${index}_a${ai}`;
+      div.innerHTML += `
+        <label for="${inputId}">
+          <input id="${inputId}" type="radio" name="q${index}" value="${a.correct ? "1" : "0"}">
+          ${a.text}
+        </label>`;
+    });
+
+    quiz.appendChild(div);
+  });
+
+  document.getElementById("result").textContent = "";
+}
+
+function checkAnswers(){
+  let score = 0;
+  const questionDivs = document.querySelectorAll(".question");
+
+  questionDivs.forEach((qDiv, qi) => {
+    const radios = qDiv.querySelectorAll('input[type="radio"]');
+
+    radios.forEach(radio => {
+      const label = radio.parentElement;
+
+      if(radio.checked){
+        if(radio.value === "1"){
+          score++;
+          label.classList.add("correct");
+        } else {
+          label.classList.add("wrong");
+        }
+      }
+
+      if(radio.value === "1"){
+        label.classList.add("correct"); // düzgün cavabı göstər
+      }
+
+      radio.disabled = true;
+    });
+  });
+
+  document.getElementById("result").textContent =
+    `Düzgün cavab sayı: ${score} / ${rendered.length}`;
+}
+
+document.getElementById("checkBtn").addEventListener("click", checkAnswers);
+
+document.addEventListener("DOMContentLoaded", renderQuiz);
+</script>
+
+</body>
+</html>
